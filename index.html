@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Name ↔ ID & Color Hex Converter</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2em auto; }
+    section { margin-bottom: 2em; }
+    label, input, button { display: block; width: 100%; margin: .5em 0; font-size: 1em; }
+    pre { background: #f4f4f4; padding: 1em; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+
+  <section>
+    <h2>Name → ID</h2>
+    <label for="nameInput">Enter character or color name:</label>
+    <input id="nameInput" placeholder="e.g. ASTRONOMER or black" />
+    <button onclick="convertName()">Convert Name → ID</button>
+    <pre id="nameOutput"></pre>
+  </section>
+
+  <section>
+    <h2>ID → Name / Hex</h2>
+    <label for="idInput">Enter signed 32-bit ID:</label>
+    <input id="idInput" placeholder="e.g. 1508736101 or -15658735" />
+    <button onclick="convertID()">Convert ID → Name/Hex</button>
+    <pre id="idOutput"></pre>
+  </section>
+
+  <script>
+    // FNV-1 32-bit hash (offset basis 0x811C9DC5, prime 0x01000193)
+    function fnv1(name) {
+      let h = 0x811c9dc5;
+      name = name.trim().toUpperCase();
+      for (let i = 0; i < name.length; i++) {
+        h = Math.imul(h, 0x01000193) >>> 0;
+        h ^= name.charCodeAt(i);
+      }
+      return (h & 0x80000000) ? h - 0x100000000 : h;
+    }
+
+    // Known character IDs (from your examples)
+    const charMap = {
+      "ABELINCOLN": -800284058,
+      "ALFREDNEOBRICKSBURG": 1226434199,
+      "CHEF2": -1162071635,
+      "BADCOP_CLASSIC": -1207371187,
+      "BANDIT02": 515879237,
+      "ANNLEE": -1673264012,
+      "ANUBISGUARD": -1694101548,
+      "ASTRONOMER": 1508736101
+    };
+    // Reverse lookup for characters
+    const charIDMap = Object.fromEntries(
+      Object.entries(charMap).map(([k,v]) => [String(v), k])
+    );
+
+    // Known colors
+    const colorMap = {
+      "BLACK":  -15658735,
+      "WHITE":    -723724,
+      "BLUE":    -5744098,
+      "RED":    -16777036,
+      "PINK":    -6474536
+    };
+    // Reverse lookup for colors
+    const colorIDMap = Object.fromEntries(
+      Object.entries(colorMap).map(([k,v]) => [String(v), k])
+    );
+
+    // format signed ID → unsigned hex string
+    function idToHex(id) {
+      let u = id >>> 0;
+      let hx = u.toString(16).toUpperCase().padStart(8,'0');
+      return "0x" + hx;
+    }
+
+    function convertName() {
+      const name = document.getElementById('nameInput').value.trim().toUpperCase();
+      let out;
+      if (!name) {
+        out = "Please enter a name.";
+      }
+      else if (charMap[name] !== undefined) {
+        out = `${name} = ${charMap[name]}`;
+      }
+      else if (colorMap[name] !== undefined) {
+        out = `${name} = ${colorMap[name]}  (ARGB: ${idToHex(colorMap[name])})`;
+      }
+      else {
+        let id = fnv1(name);
+        out = `${name} = ${id}`;
+      }
+      document.getElementById('nameOutput').textContent = out;
+    }
+
+    function convertID() {
+      const raw = document.getElementById('idInput').value.trim();
+      if (!raw.match(/^-?\d+$/)) {
+        document.getElementById('idOutput').textContent = "Enter a valid integer ID.";
+        return;
+      }
+      const id = parseInt(raw, 10);
+      const pieces = [];
+      // Character name?
+      if (charIDMap[raw]) {
+        pieces.push(`Character name: ${charIDMap[raw]}`);
+      }
+      // Color name?
+      if (colorIDMap[raw]) {
+        pieces.push(`Color name: ${colorIDMap[raw]}`);
+      }
+      // Always show hex
+      pieces.push(`Hex (ARGB): ${idToHex(id)}`);
+      document.getElementById('idOutput').textContent = pieces.join("\n");
+    }
+  </script>
+</body>
+</html>
