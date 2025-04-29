@@ -2,119 +2,138 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Name ↔ ID & Color Hex Converter</title>
+  <title>Name ↔ ID & Color Converter</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 2em auto; }
-    section { margin-bottom: 2em; }
-    label, input, button { display: block; width: 100%; margin: .5em 0; font-size: 1em; }
-    pre { background: #f4f4f4; padding: 1em; white-space: pre-wrap; }
+    body { font-family: sans-serif; max-width:600px; margin:2em auto; }
+    section { border:1px solid #ccc; padding:1em; margin-bottom:2em; }
+    input, textarea, button { width:100%; margin:0.5em 0; font-size:1em; }
+    pre { background:#f4f4f4; padding:1em; white-space:pre-wrap; }
+    #swatch { width:2em; height:2em; display:inline-block; margin-left:0.5em; border:1px solid #000; }
   </style>
 </head>
 <body>
 
+  <!-- CHARACTER TOOL -->
   <section>
-    <h2>Name → ID</h2>
-    <label for="nameInput">Enter character or color name:</label>
-    <input id="nameInput" placeholder="e.g. ASTRONOMER or black" />
-    <button onclick="convertName()">Convert Name → ID</button>
-    <pre id="nameOutput"></pre>
+    <h2>Characters IDs</h2>
+
+    <label>Name → ID</label>
+    <input id="charName" placeholder="e.g. IRONMANMARK6" />
+    <button onclick="charNameToID()">Get ID</button>
+    <pre id="charNameOut"></pre>
+
+    <hr/>
+
+    <label>ID → Name (This requires a list of possible names.)</label>
+    <input id="charID" placeholder="e.g. -2138279224" />
+    <textarea id="charList" rows="4"
+      placeholder="Paste one name per line…"></textarea>
+    <button onclick="charIDToName()">Find Matches</button>
+    <pre id="charIDOut"></pre>
   </section>
 
+  <!-- COLOR TOOL -->
   <section>
-    <h2>ID → Name / Hex</h2>
-    <label for="idInput">Enter signed 32-bit ID:</label>
-    <input id="idInput" placeholder="e.g. 1508736101 or -15658735" />
-    <button onclick="convertID()">Convert ID → Name/Hex</button>
-    <pre id="idOutput"></pre>
+    <h2>Colors IDs</h2>
+
+    <label>Color hex code → ID</label>
+    <input id="colName" placeholder="e.g. #1e5aa8" />
+    <button onclick="colNameToID()">Get Color ID</button>
+    <pre id="colNameOut"></pre>
+
+    <hr/>
+
+    <label>ID → Hex code + preview</label>
+    <input id="colID" placeholder="e.g. -5744098" />
+    <button onclick="colIDToHex()">Show Hex & Preview</button>
+    <pre id="colIDOut"></pre>
   </section>
+
+  <canvas id="cc" width="1" height="1" style="display:none"></canvas>
 
   <script>
-    // FNV-1 32-bit hash (offset basis 0x811C9DC5, prime 0x01000193)
+    // ——— 1) FNV-1 32-bit hash for character names ———
     function fnv1(name) {
-      let h = 0x811c9dc5;
-      name = name.trim().toUpperCase();
-      for (let i = 0; i < name.length; i++) {
-        h = Math.imul(h, 0x01000193) >>> 0;
-        h ^= name.charCodeAt(i);
+      let h = 0x811c9dc5 >>> 0;
+      const s = name.trim().toUpperCase();
+      for (let i = 0; i < s.length; i++) {
+        // multiply & mask to 32 bits
+        h = (Math.imul(h, 0x01000193) >>> 0);
+        // xor & mask
+        h = ((h ^ s.charCodeAt(i)) >>> 0);
       }
-      return (h & 0x80000000) ? h - 0x100000000 : h;
+      // convert to signed 32-bit
+      return (h & 0x80000000) ? (h - 0x100000000) : h;
     }
 
-    // Known character IDs (from your examples)
-    const charMap = {
-      "ABELINCOLN": -800284058,
-      "ALFREDNEOBRICKSBURG": 1226434199,
-      "CHEF2": -1162071635,
-      "BADCOP_CLASSIC": -1207371187,
-      "BANDIT02": 515879237,
-      "ANNLEE": -1673264012,
-      "ANUBISGUARD": -1694101548,
-      "ASTRONOMER": 1508736101
-    };
-    // Reverse lookup for characters
-    const charIDMap = Object.fromEntries(
-      Object.entries(charMap).map(([k,v]) => [String(v), k])
-    );
-
-    // Known colors
-    const colorMap = {
-      "BLACK":  -15658735,
-      "WHITE":    -723724,
-      "BLUE":    -5744098,
-      "RED":    -16777036,
-      "PINK":    -6474536
-    };
-    // Reverse lookup for colors
-    const colorIDMap = Object.fromEntries(
-      Object.entries(colorMap).map(([k,v]) => [String(v), k])
-    );
-
-    // format signed ID → unsigned hex string
-    function idToHex(id) {
-      let u = id >>> 0;
-      let hx = u.toString(16).toUpperCase().padStart(8,'0');
-      return "0x" + hx;
-    }
-
-    function convertName() {
-      const name = document.getElementById('nameInput').value.trim().toUpperCase();
-      let out;
-      if (!name) {
-        out = "Please enter a name.";
-      }
-      else if (charMap[name] !== undefined) {
-        out = `${name} = ${charMap[name]}`;
-      }
-      else if (colorMap[name] !== undefined) {
-        out = `${name} = ${colorMap[name]}  (ARGB: ${idToHex(colorMap[name])})`;
-      }
-      else {
-        let id = fnv1(name);
-        out = `${name} = ${id}`;
-      }
-      document.getElementById('nameOutput').textContent = out;
-    }
-
-    function convertID() {
-      const raw = document.getElementById('idInput').value.trim();
-      if (!raw.match(/^-?\d+$/)) {
-        document.getElementById('idOutput').textContent = "Enter a valid integer ID.";
+    function charNameToID() {
+      const n = document.getElementById('charName').value;
+      if (!n) {
+        charNameOut.textContent = 'Enter a name.';
         return;
       }
-      const id = parseInt(raw, 10);
-      const pieces = [];
-      // Character name?
-      if (charIDMap[raw]) {
-        pieces.push(`Character name: ${charIDMap[raw]}`);
-      }
-      // Color name?
-      if (colorIDMap[raw]) {
-        pieces.push(`Color name: ${colorIDMap[raw]}`);
-      }
-      // Always show hex
-      pieces.push(`Hex (ARGB): ${idToHex(id)}`);
-      document.getElementById('idOutput').textContent = pieces.join("\n");
+      const id = fnv1(n);
+      charNameOut.textContent = `${n.trim().toUpperCase()} = ${id}`;
     }
+
+    function charIDToName() {
+      const raw = charID.value.trim();
+      if (!/^-?\d+$/.test(raw)) {
+        charIDOut.textContent = 'Enter a valid integer ID.';
+        return;
+      }
+      const target = parseInt(raw, 10);
+      const candidates = charList.value
+        .split('\n').map(x=>x.trim()).filter(Boolean);
+      const hits = candidates.filter(x => fnv1(x) === target);
+      charIDOut.textContent = hits.length
+        ? 'Matches:\n' + hits.join('\n')
+        : 'No matches found.';
+    }
+
+    // ——— 2) Color Name → Signed 32-bit ARGB ID ———
+    function colNameToID() {
+      const name = colName.value.trim();
+      if (!name) {
+        colNameOut.textContent = 'Enter a color.';
+        return;
+      }
+      const ctx = cc.getContext('2d');
+      ctx.fillStyle = name;
+      ctx.fillRect(0,0,1,1);
+      const [r,g,b,a] = ctx.getImageData(0,0,1,1).data;
+      // pack ABGR: A<<24 | B<<16 | G<<8 | R, mask 32-bit
+      const u = (((a<<24)|(b<<16)|(g<<8)|r) >>> 0);
+      const s = (u & 0x80000000) ? u - 0x100000000 : u;
+      colNameOut.textContent =
+        `${name.toUpperCase()} → ID: ${s}  (hex: 0x${u.toString(16).toUpperCase().padStart(8,'0')})`;
+    }
+
+    // ——— 3) Color ID → Hex + Preview ———
+    function colIDToHex() {
+      const raw = colID.value.trim();
+      if (!/^-?\d+$/.test(raw)) {
+        colIDOut.textContent = 'Enter a valid integer ID.';
+        return;
+      }
+      const signed = parseInt(raw,10);
+      const u = signed >>> 0;
+      const hex = u.toString(16).toUpperCase().padStart(8,'0');
+      // unpack ABGR → RGBA
+      const A = u >>> 24,
+            B = (u >>> 16) & 0xFF,
+            G = (u >>> 8) & 0xFF,
+            R = u & 0xFF;
+      colIDOut.innerHTML =
+        `Signed ID: ${signed}\n` +
+        `Hex ABGR: 0x${hex}\n` +
+        `Preview: <span id="swatch"></span>`;
+      document.getElementById('swatch').style.backgroundColor =
+        `rgba(${R},${G},${B},${(A/255).toFixed(3)})`;
+    }
+
+    // Quick sanity check in console:
+    // console.log(fnv1("CLASSICSPACE_ALIEN"), "should be", -1425518173);
   </script>
 </body>
 </html>
