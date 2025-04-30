@@ -4,167 +4,235 @@
   <meta charset="UTF-8">
   <title>Character & Tint ID finder</title>
   <style>
-    /* Make width:100% include padding & borders */
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: sans-serif;
-      max-width: 600px;
-      margin: 2em auto;
-    }
-    section {
-      border: 1px solid #ccc;
-      padding: 1em;
-      margin-bottom: 2em;
-    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: sans-serif; max-width:600px; margin:2em auto; }
+    section { border:1px solid #ccc; padding:1em; margin-bottom:2em; }
 
     /* Full-width controls */
-    input[type="text"],
-    textarea,
-    input[type="file"],
-    input[type="color"],
-    button {
-      width: 100%;
-      font-size: 1em;
-      margin: 0.5em 0;
+    input[type="text"], textarea, input[type="file"], button {
+      width:100%; font-size:1em; margin:0.5em 0;
     }
 
     /* Character-list textarea tweaks */
     #charList {
-      resize: vertical;
-      min-height: 2em;
-      overflow-x: hidden;
-      white-space: pre-wrap;
-      word-wrap: break-word;
+      resize: vertical; min-height:2em;
+      overflow-x:hidden; white-space:pre-wrap; word-wrap:break-word;
     }
 
-    pre {
-      background: #f4f4f4;
-      padding: 1em;
-      white-space: pre-wrap;
-    }
+    pre { background:#f4f4f4; padding:1em; white-space:pre-wrap; }
 
-    .dropdown-content {
-      display: none;
-      padding: 0.5em;
-      border: 1px solid #aaa;
-      margin: 0.5em 0;
-    }
-    .dropdown.open .dropdown-content {
-      display: block;
-    }
-
+    /* Dropdown */
+    .dropdown-content { display:none; padding:0.5em; border:1px solid #aaa; margin:0.5em 0; }
+    .dropdown.open .dropdown-content { display:block; }
     .toggle-btn {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: none;
-      border: 1px solid #ccc;
-      padding: 0.5em;
-      cursor: pointer;
+      display:flex; justify-content:space-between; align-items:center;
+      background:none; border:1px solid #ccc;
+      padding:0.5em; cursor:pointer;
     }
+    .triangle { display:inline-block; transform:rotate(180deg); }
+    .dropdown.open .triangle { transform:rotate(0deg); }
 
-    .triangle {
-      display: inline-block;
-      transform: rotate(180deg);
-    }
-    .dropdown.open .triangle {
-      transform: rotate(0deg);
-    }
-
-    .small-color {
-      padding: 0;
-      border: none;
-      vertical-align: middle;
-      /* width/height inherited from input[type=color] above */
-    }
-
+    /* Pickers */
+    .small-color { width:3em; height:2em; padding:0; border:none; vertical-align:middle; }
     input[type=color] {
-      -webkit-appearance: none;
-      border: none;
-      padding: 0;
+      -webkit-appearance:none; border:none; padding:0;
+      width:3em; height:2em;
     }
-    input[type=color]::-webkit-color-swatch-wrapper {
-      padding: 0;
-    }
-    input[type=color]::-webkit-color-swatch {
-      border: 1px solid gray;
-    }
+    input[type=color]::-webkit-color-swatch-wrapper { padding:0; }
+    input[type=color]::-webkit-color-swatch { border:1px solid gray; }
 
-    #imageCanvas {
-      display: block;
-      margin: 0.5em auto;
-      border: 1px solid #ccc;
-      cursor: crosshair;
+    /* Image + preview layout */
+    .image-container {
+      display:flex; justify-content:center; align-items:flex-end; margin-top:0.5em;
     }
-    #glCanvas {
-      display: none;
-    }
+    #imageCanvas { border:1px solid #ccc; cursor:crosshair; }
+    #imageSwatch { margin-left:0.5em; }
+
+    /* Offscreen WebGL */
+    #glCanvas { display:none; }
   </style>
 </head>
 <body>
 
-<section>
-  <h2>Characters IDs</h2>
-  <label>Name → ID</label>
-  <input id="charName" type="text" placeholder="e.g. IRONMANMARK6" />
-  <button onclick="charNameToID()">Get ID</button>
-  <pre id="charNameOut"></pre>
-  <hr/>
-  <label>ID → Name (requires a list of all possible character names)</label>
-  <input id="charID" type="text" placeholder="e.g. -2138279224" />
-  <textarea id="charList" rows="4" placeholder="One name per line…"></textarea>
-  <button onclick="charIDToName()">Find Matches</button>
-  <pre id="charIDOut"></pre>
-</section>
+  <section>
+    <h2>Characters IDs</h2>
+    <label>Name → ID</label>
+    <input id="charName" type="text" placeholder="e.g. IRONMANMARK6" />
+    <button onclick="charNameToID()">Get ID</button>
+    <pre id="charNameOut"></pre>
+    <hr/>
+    <label>ID → Name (Requires a list of all possible characters)</label>
+    <input id="charID" type="text" placeholder="e.g. -2138279224" />
+    <textarea id="charList" rows="4" placeholder="One name per line…"></textarea>
+    <button onclick="charIDToName()">Find Matches</button>
+    <pre id="charIDOut"></pre>
+  </section>
 
-<section>
-  <h2>Color (Tint) IDs</h2>
-  <label>Color hex code → Tint ID</label>
-  <input id="colName" type="text" placeholder="#RRGGBB" />
-  <div class="dropdown" id="pickerDropdown">
-    <button class="toggle-btn" onclick="toggleDropdown()">
-      Advanced picker <span class="triangle">⌵</span>
-    </button>
-    <div class="dropdown-content">
-      <label>Color picker:</label><br/>
-      <input type="color" id="colorPicker" class="small-color"
-             onchange="colName.value=this.value; colNameToID()" /><br/>
-      <label>Image eyedropper:</label><br/>
-      <input type="file" id="imageLoader"
-             accept=".dds,.DDS,.tex,.TEX,image/*" />
-      <canvas id="imageCanvas"></canvas>
+  <section>
+    <h2>Color (Tint) IDs</h2>
+    <label>Color hex code → Tint ID</label>
+    <input id="colName" type="text" placeholder="#RRGGBB" />
+
+    <div class="dropdown" id="pickerDropdown">
+      <button class="toggle-btn" onclick="toggleDropdown()">
+        Advanced picker <span class="triangle">⌵</span>
+      </button>
+      <div class="dropdown-content">
+        <label>Color picker:</label><br/>
+        <input type="color" id="colorPicker" class="small-color"
+               onchange="colName.value=this.value; colNameToID()" /><br/>
+        <label>Image eyedropper:</label><br/>
+        <input type="file" id="imageLoader" accept=".dds,.DDS,.tex,.TEX,image/*" />
+        <div class="image-container">
+          <canvas id="imageCanvas"></canvas>
+          <input id="imageSwatch" class="small-color" type="color" disabled />
+        </div>
+      </div>
     </div>
-  </div>
-  <button onclick="colNameToID()">Get Tint ID</button>
-  <pre id="colNameOut"></pre>
-  <hr/>
-  <label>ID → Hex code + preview</label>
-  <input id="colID" type="text" placeholder="e.g. -5744098" />
-  <button onclick="colIDToHex()">Show Hex & Preview</button>
-  <pre id="colIDOut"></pre>
-</section>
 
-<canvas id="glCanvas"></canvas>
+    <button onclick="colNameToID()">Get Tint ID</button>
+    <pre id="colNameOut"></pre>
+    <hr/>
+    <label>ID → Hex code + preview</label>
+    <input id="colID" type="text" placeholder="e.g. -5744098" />
+    <button onclick="colIDToHex()">Show Hex & Preview</button>
+    <pre id="colIDOut"></pre>
+  </section>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.149.0/build/three.module.js",
-    "three/examples/jsm/loaders/DDSLoader.js":
-      "https://unpkg.com/three@0.149.0/examples/jsm/loaders/DDSLoader.js"
+  <canvas id="glCanvas"></canvas>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.149.0/build/three.module.js",
+      "three/examples/jsm/loaders/DDSLoader.js": "https://unpkg.com/three@0.149.0/examples/jsm/loaders/DDSLoader.js"
+    }
   }
-}
-</script>
+  </script>
 
-<script type="module">
-import * as THREE from 'three';
-import { DDSLoader } from 'three/examples/jsm/loaders/DDSLoader.js';
+  <script type="module">
+  import * as THREE from 'three';
+  import { DDSLoader } from 'three/examples/jsm/loaders/DDSLoader.js';
 
-// … your existing module code for hashing, color-ID, DDSLoader/WebGL readback, eyedropper …
+  function fnv1(name) {
+    let h = 0x811c9dc5 >>> 0;
+    for (let c of name.trim().toUpperCase()) {
+      h = Math.imul(h, 0x01000193) >>> 0;
+      h ^= c.charCodeAt(0);
+    }
+    return (h & 0x80000000) ? h - 0x100000000 : h;
+  }
 
-</script>
+  window.charNameToID = () => {
+    const n = charName.value;
+    charNameOut.textContent = n
+      ? `${n.toUpperCase()} = ${fnv1(n)}`
+      : 'Enter a name.';
+  };
+
+  window.charIDToName = () => {
+    const raw = charID.value.trim();
+    if (!/^-?\d+$/.test(raw)) { charIDOut.textContent = 'Enter valid ID.'; return; }
+    const target = parseInt(raw,10);
+    const hits = charList.value
+      .split('\n').map(x=>x.trim()).filter(Boolean)
+      .filter(x=>fnv1(x)===target);
+    charIDOut.textContent = hits.length ? hits.join('\n') : 'No matches found.';
+  };
+
+  window.toggleDropdown = () => {
+    document.getElementById('pickerDropdown').classList.toggle('open');
+  };
+
+  window.colNameToID = () => {
+    const inp = colName.value.trim();
+    const name = inp.startsWith('#') ? inp : '#' + inp;
+    if (!/^#?[0-9A-Fa-f]{6}$/.test(name)) {
+      colNameOut.textContent = 'Enter #RRGGBB'; return;
+    }
+    const [r,g,b] = [1,3,5].map(i=>parseInt(name.slice(i,i+2),16));
+    const u = (((255<<24)|(b<<16)|(g<<8)|r)>>>0);
+    const s = (u & 0x80000000) ? u - 0x100000000 : u;
+    colNameOut.textContent = `${name.toUpperCase()} = ${s}`;
+  };
+
+  window.colIDToHex = () => {
+    const raw = colID.value.trim();
+    if (!/^-?\d+$/.test(raw)) { colIDOut.textContent = 'Enter valid ID.'; return; }
+    const signed = parseInt(raw,10), u = signed>>>0;
+    const full = u.toString(16).toUpperCase().padStart(8,'0');
+    const hex  = full.slice(6)+full.slice(4,6)+full.slice(2,4);
+    colIDOut.innerHTML =
+      `${signed} = #${hex}<br>Preview: <input id="swatch" type="color" class="small-color" disabled>`;
+    swatch.value = `#${hex}`;
+  };
+
+  // DDS Loader + WebGL readback setup
+  const ddsLoader = new DDSLoader();
+  const glCanvas = document.getElementById('glCanvas');
+  const renderer = new THREE.WebGLRenderer({canvas:glCanvas});
+  const target = new THREE.WebGLRenderTarget(1,1);
+  const camera = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  const scene = new THREE.Scene();
+  const quad = new THREE.Mesh(
+    new THREE.PlaneGeometry(2,2),
+    new THREE.MeshBasicMaterial({map:null})
+  );
+  scene.add(quad);
+
+  imageLoader.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    const canvas2D = imageCanvas;
+    const ctx2D = canvas2D.getContext('2d', {willReadFrequently:true});
+
+    if (ext==='dds'||ext==='tex') {
+      const url = URL.createObjectURL(file);
+      ddsLoader.load(url, tex => {
+        quad.material.map = tex;
+        const w = tex.image.width, h = tex.image.height;
+        target.setSize(w,h);
+        renderer.setRenderTarget(target);
+        renderer.render(scene, camera);
+        renderer.setRenderTarget(null);
+
+        const pixels = new Uint8Array(w*h*4);
+        renderer.readRenderTargetPixels(target,0,0,w,h,pixels);
+
+        const scale = Math.min(colName.clientWidth*0.66/w, colName.clientWidth*0.66/h,1);
+        canvas2D.width = w*scale;
+        canvas2D.height = h*scale;
+
+        const imgData = new ImageData(new Uint8ClampedArray(pixels), w,h);
+        const off = document.createElement('canvas');
+        off.width=w; off.height=h;
+        off.getContext('2d', {willReadFrequently:true}).putImageData(imgData,0,0);
+        ctx2D.drawImage(off,0,0,canvas2D.width,canvas2D.height);
+      }, undefined, err => console.error('DDS load error',err));
+    } else {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await img.decode();
+      const w=img.width, h=img.height;
+      const scale = Math.min(colName.clientWidth*0.66/w, colName.clientWidth*0.66/h,1);
+      canvas2D.width = w*scale;
+      canvas2D.height = h*scale;
+      ctx2D.drawImage(img,0,0,canvas2D.width,canvas2D.height);
+    }
+  });
+
+  // Eyedropper click
+  imageCanvas.addEventListener('click', e => {
+    const rect = imageCanvas.getBoundingClientRect();
+    const x = e.clientX-rect.left, y = e.clientY-rect.top;
+    const [r,g,b] = imageCanvas.getContext('2d', {willReadFrequently:true})
+                  .getImageData(x,y,1,1).data;
+    const hex = '#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+    colName.value = hex; colNameToID();
+    imageSwatch.value = hex;
+  });
+  </script>
+
 </body>
 </html>
