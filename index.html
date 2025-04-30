@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -89,106 +88,116 @@
 </script>
 
 <script type="module">
-  import * as THREE from 'three';
-  import { DDSLoader } from 'three/examples/jsm/loaders/DDSLoader.js';
+import * as THREE from 'three';
+import { DDSLoader } from 'three/examples/jsm/loaders/DDSLoader.js';
 
-  function fnv1(name) {
-    let h = 0x811c9dc5 >>> 0;
-    for (let c of name.trim().toUpperCase()) {
-      h = Math.imul(h, 0x01000193) >>> 0;
-      h ^= c.charCodeAt(0);
-    }
-    return (h & 0x80000000) ? h - 0x100000000 : h;
+function fnv1(name) {
+  let h = 0x811c9dc5 >>> 0;
+  for (let c of name.trim().toUpperCase()) {
+    h = Math.imul(h, 0x01000193) >>> 0;
+    h ^= c.charCodeAt(0);
   }
+  return (h & 0x80000000) ? h - 0x100000000 : h;
+}
 
-  window.charNameToID = () => {
-    const n = document.getElementById('charName').value;
-    document.getElementById('charNameOut').textContent = n ? `${n.toUpperCase()} = ${fnv1(n)}` : 'Enter a name.';
-  };
+window.charNameToID = () => {
+  const n = document.getElementById('charName').value;
+  document.getElementById('charNameOut').textContent =
+    n ? `${n.toUpperCase()} = ${fnv1(n)}` : 'Enter a name.';
+};
 
-  window.charIDToName = () => {
-    const raw = document.getElementById('charID').value.trim();
-    const out = document.getElementById('charIDOut');
-    if (!/^-?\d+$/.test(raw)) {
-      out.textContent = 'Enter valid ID.'; return;
-    }
-    const target = parseInt(raw,10);
-    const candidates = document.getElementById('charList').value.split('\n').map(x=>x.trim()).filter(Boolean);
-    const hits = candidates.filter(x=>fnv1(x)===target);
-    out.textContent = hits.length ? hits.join('\n') : 'No matches found.';
-  };
+window.charIDToName = () => {
+  const raw = document.getElementById('charID').value.trim();
+  const out = document.getElementById('charIDOut');
+  if (!/^-?\d+$/.test(raw)) {
+    out.textContent = 'Enter valid ID.'; return;
+  }
+  const target = parseInt(raw,10);
+  const candidates = document.getElementById('charList').value
+    .split('\n').map(x=>x.trim()).filter(Boolean);
+  const hits = candidates.filter(x=>fnv1(x)===target);
+  out.textContent = hits.length ? hits.join('\n') : 'No matches found.';
+};
 
-  window.toggleDropdown = () => {
-    document.getElementById('pickerDropdown').classList.toggle('open');
-  };
+window.toggleDropdown = () => {
+  document.getElementById('pickerDropdown').classList.toggle('open');
+};
 
-  window.colNameToID = () => {
-    const inp = document.getElementById('colName').value.trim();
-    const name = inp.startsWith('#') ? inp : '#' + inp;
-    if (!/^#?[0-9A-Fa-f]{6}$/.test(name)) {
-      document.getElementById('colNameOut').textContent = 'Enter #RRGGBB'; return;
-    }
-    const [r,g,b] = [1,3,5].map(i=>parseInt(name.slice(i,i+2),16));
-    const u = (((255<<24)|(b<<16)|(g<<8)|r)>>>0);
-    const s = (u & 0x80000000)? u-0x100000000 : u;
-    document.getElementById('colNameOut').textContent = `${name.toUpperCase()} = ${s}`;
-  };
+window.colNameToID = () => {
+  const inp = document.getElementById('colName').value.trim();
+  const name = inp.startsWith('#') ? inp : '#' + inp;
+  if (!/^#?[0-9A-Fa-f]{6}$/.test(name)) {
+    document.getElementById('colNameOut').textContent = 'Enter #RRGGBB'; return;
+  }
+  const [r,g,b] = [1,3,5].map(i=>parseInt(name.slice(i,i+2),16));
+  const u = (((255<<24)|(b<<16)|(g<<8)|r)>>>0);
+  const s = (u & 0x80000000)? u-0x100000000 : u;
+  document.getElementById('colNameOut').textContent = `${name.toUpperCase()} = ${s}`;
+};
 
-  window.colIDToHex = () => {
-    const raw = document.getElementById('colID').value.trim();
-    if (!/^-?\d+$/.test(raw)) {
-      document.getElementById('colIDOut').textContent = 'Enter valid ID.'; return;
-    }
-    const signed = parseInt(raw,10), u = signed>>>0;
-    const full = u.toString(16).toUpperCase().padStart(8,'0');
-    const hex  = full.slice(6)+full.slice(4,6)+full.slice(2,4);
-    document.getElementById('colIDOut').innerHTML =
-      `${signed} = #${hex}\nPreview: <input id="swatch" type="color" class="small-color" disabled>`;
-    document.getElementById('swatch').value = `#${hex}`;
-  };
+window.colIDToHex = () => {
+  const raw = document.getElementById('colID').value.trim();
+  const out = document.getElementById('colIDOut');
+  if (!/^-?\d+$/.test(raw)) {
+    out.textContent = 'Enter valid ID.'; return;
+  }
+  const signed = parseInt(raw,10), u = signed>>>0;
+  const full = u.toString(16).toUpperCase().padStart(8,'0');
+  const hex  = full.slice(6)+full.slice(4,6)+full.slice(2,4);
+  out.innerHTML =
+    `${signed} = #${hex}\nPreview: <input id="swatch" type="color" class="small-color" disabled>`;
+  document.getElementById('swatch').value = `#${hex}`;
+};
 
-  const ddsLoader = new DDSLoader();
-  document.getElementById('imageLoader').addEventListener('change', async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const ext = file.name.split('.').pop().toLowerCase();
-    const buf = await file.arrayBuffer();
-    let imageData, w, h;
+const ddsLoader = new DDSLoader();
+document.getElementById('imageLoader').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    if (ext==='dds'||ext==='tex') {
-      const tex = ddsLoader.parse(buf, true);
-      w = tex.image.width; h = tex.image.height;
-      imageData = new ImageData(new Uint8ClampedArray(tex.image.data), w, h);
-    } else {
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      await img.decode();
+  const ext = file.name.split('.').pop().toLowerCase();
+  const canvas = document.getElementById('imageCanvas');
+  const ctx = canvas.getContext('2d');
+
+  if (ext === 'dds' || ext === 'tex') {
+    const url = URL.createObjectURL(file);
+    ddsLoader.load(url, tex => {
+      const img = tex.image;
+      const w = img.width, h = img.height;
+      const data = new Uint8ClampedArray(img.data);
+      const imageData = new ImageData(data, w, h);
+      const scale = Math.min(canvas.clientWidth / w, canvas.clientWidth / h, 1);
+      canvas.width = w * scale;
+      canvas.height = h * scale;
       const off = document.createElement('canvas');
-      off.width = img.width; off.height = img.height;
-      off.getContext('2d').drawImage(img,0,0);
-      w = off.width; h = off.height;
-      imageData = off.getContext('2d').getImageData(0,0,w,h);
-    }
+      off.width = w; off.height = h;
+      off.getContext('2d').putImageData(imageData, 0, 0);
+      ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+    }, undefined, err => {
+      console.error('Failed to load DDS:', err);
+    });
+  } else {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    await img.decode();
+    const w = img.width, h = img.height;
+    const scale = Math.min(canvas.clientWidth / w, canvas.clientWidth / h, 1);
+    canvas.width = w * scale;
+    canvas.height = h * scale;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  }
+});
 
-    const c = document.getElementById('imageCanvas'), ctx = c.getContext('2d'),
-          maxDim = document.getElementById('colName').clientWidth*0.66,
-          scale = Math.min(maxDim/w, maxDim/h,1);
-    c.width = w*scale; c.height = h*scale;
-
-    const off2 = document.createElement('canvas');
-    off2.width = w; off2.height = h;
-    off2.getContext('2d').putImageData(imageData,0,0);
-    ctx.drawImage(off2,0,0,c.width,c.height);
-  });
-
-  document.getElementById('imageCanvas').addEventListener('click', e => {
-    const ctx = imageCanvas.getContext('2d'),
-          rect = imageCanvas.getBoundingClientRect(),
-          x = e.clientX-rect.left, y = e.clientY-rect.top,
-          [r,g,b] = ctx.getImageData(x,y,1,1).data;
-    const hex = '#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
-    colName.value=hex; colNameToID();
-  });
+document.getElementById('imageCanvas').addEventListener('click', e => {
+  const c = document.getElementById('imageCanvas');
+  const ctx = c.getContext('2d');
+  const rect = c.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  const [r,g,b] = ctx.getImageData(x,y,1,1).data;
+  const hex = '#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+  document.getElementById('colName').value = hex;
+  colNameToID();
+});
 </script>
+
 </body>
 </html>
