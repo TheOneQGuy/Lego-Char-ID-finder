@@ -7,4 +7,6 @@ For the longest time it wasn't known how to get the number for a character that 
 
 Buuuuuut I was somehow able to convince ChatGPT to make a site that got the number for a character just by giving it the CD name after like 50 times of me spotting a problem and telling ChatGPT to fix it, only to make a new problem (*It was harder than it sounds like...*) So anyways enjoy! (Tool URL: https://theoneqguy.github.io/Lego-Char-ID-finder/)
 
-P.S. I would share my conversation with ChatGPT, but I uploaded an image in that conversation so I can't for some reason. Also I have no idea how the tool actually works and I don't know HTML, it was created entirely by ChatGPT (The "Reason" feature helped so much because otherwise it just made things up) and me just changing some UI text.
+Also I have no idea how the tool actually works and I don't know HTML, it was created entirely by ChatGPT (The "Reason" feature helped so much because otherwise it just made things up) and me just changing some UI text.
+
+P.S. Here's my conversation with ChatGPT: https://theoneqguy.github.io/Lego-Char-ID-finder---Conversation-with-ChatGPT/
