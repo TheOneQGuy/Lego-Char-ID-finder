@@ -68,15 +68,15 @@ input[type=color]::-webkit-color-swatch { border:1px solid gray; }
 <script>
 // ——— Minimal FNV-1 32-bit hash ———
 function fnv1(name) {
-    let h = 0x811c9dc5 >>> 0;
-    const s = name.trim().toUpperCase();
-    for (let i = 0; i < s.length; i++) {
-        h = Math.imul(h, 0x01000193) >>> 0;
-        h ^= s.charCodeAt(i);
-    }
-    // Force signed 32-bit range
-    h >>>= 0;
-    return (h & 0x80000000) ? h - 0x100000000 : h;
+  let h = 0x811c9dc5 >>> 0;                // offset basis (u32)
+  const s = name.trim().toUpperCase();
+  for (let i = 0; i < s.length; i++) {
+    h = Math.imul(h, 0x01000193) >>> 0;    // multiply & mask to u32
+    h = (h ^ s.charCodeAt(i)) >>> 0;       // xor & mask to u32
+  }
+  // Return canonical signed 32-bit value (no extra subtraction)
+  const signed32 = (h & 0x80000000) ? h - 0x100000000 : h;
+  return signed32;
 }
 
 // ——— UI Functions ———
