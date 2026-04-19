@@ -3,8 +3,4 @@ This is a tool to get character names for the MINIFIGCUSTOMISERPARTS_AUTOGENERAT
 
 This files controls the customizer in these games, and for some games like LEGO Worlds and The LEGO Movie 2 Videogame, modifying it is necessary for being able to play as the character.
 
-For the longest time it wasn't known how to get the number for a character that wasn't already included, and since it's generated automatically, no unused characters were included there that we could use.
-
-Buuuuuut I was somehow able to convince ChatGPT to make a site that got the number for a character just by giving it the CD name after like 50 times of me spotting a problem and telling ChatGPT to fix it (yea its videcoded) So anyways enjoy! (Tool URL: https://theoneqguy.github.io/Lego-Char-ID-finder/)
-
-Also I have no idea how the tool actually works and I don't know HTML, it was created entirely by ChatGPT and me just changing some UI text.
+Note: This tool was created mostly by AI. But it is fully functional
